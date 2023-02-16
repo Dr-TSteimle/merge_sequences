@@ -1,0 +1,8 @@
+[package]
+name = "merge_sequences"
+version = "1.0.0"
+edition = "2021"
+authors = ["Thomas Steimlé <https://github.com/Dr-TSteimle>"]
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
