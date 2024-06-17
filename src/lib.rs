@@ -18,16 +18,22 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-use std::{ops::Range};
+use std::ops::Range;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Nucleotid {A, C, G, T}
+pub enum Nucleotid {
+    A,
+    C,
+    G,
+    T,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct DNAString(pub Vec<Nucleotid>);
 
 impl DNAString {
-    pub fn new(input: Vec<u8>) -> DNAString { // replace by new from vec u8 or from string
+    pub fn new(input: Vec<u8>) -> DNAString {
+        // replace by new from vec u8 or from string
         let mut seq: Vec<Nucleotid> = Vec::new();
         for nt in input {
             match nt {
@@ -35,17 +41,18 @@ impl DNAString {
                 67u8 => seq.push(Nucleotid::C),
                 71u8 => seq.push(Nucleotid::G),
                 84u8 => seq.push(Nucleotid::T),
-                _ => panic!("Unknown nucleotid {}", String::from_utf8_lossy(&vec![nt]))
+                _ => panic!("Unknown nucleotid {}", String::from_utf8_lossy(&vec![nt])),
             }
         }
         DNAString(seq)
     }
-    pub fn new_empty() -> DNAString { // replace by new
+    pub fn new_empty() -> DNAString {
+        // replace by new
         DNAString(Vec::new())
     }
     pub fn as_string(&self) -> String {
         let mut str = String::new();
-        
+
         for nt in self.0.iter() {
             match nt {
                 Nucleotid::A => str.push('A'),
@@ -57,26 +64,25 @@ impl DNAString {
         str
     }
     pub fn as_string_2(&self) -> String {
-        self.0.iter()
-        .map(|nt| {
-            match nt {
+        self.0
+            .iter()
+            .map(|nt| match nt {
                 Nucleotid::A => "A",
                 Nucleotid::C => "C",
                 Nucleotid::G => "G",
                 Nucleotid::T => "T",
-            }
-        })
-        .map(|nt| String::from(nt))
-        .collect::<Vec<String>>()
-        .join("")
+            })
+            .map(|nt| String::from(nt))
+            .collect::<Vec<String>>()
+            .join("")
     }
     pub fn k_mers(&self, k: usize) -> Vec<DNAString> {
         let len = self.0.len();
-        if k <= len  {
+        if k <= len {
             let mut res: Vec<DNAString> = Vec::new();
             let diff = (len - k) + 1;
             for i in 0..diff {
-                res.push(DNAString(self.0[i..(i+k)].to_vec()) );
+                res.push(DNAString(self.0[i..(i + k)].to_vec()));
             }
             return res;
         } else {
@@ -85,24 +91,26 @@ impl DNAString {
     }
     pub fn compressed_k_mers(&self, k: usize) -> Vec<CompressedString> {
         let len = self.0.len();
-        if k < len  {
+        if k < len {
             let mut res: Vec<CompressedString> = Vec::new();
             let diff = (len - k) + 1;
             for i in 0..diff {
-                res.push(CompressedString::new(DNAString(self.0[i..(i+k)].to_vec()) ));
+                res.push(CompressedString::new(DNAString(
+                    self.0[i..(i + k)].to_vec(),
+                )));
             }
             return res;
         } else {
-            return vec!(CompressedString::new(self.clone()));
+            return vec![CompressedString::new(self.clone())];
         }
     }
 
     pub fn merge(
-        &mut self, 
+        &mut self,
         input: &DNAString,
         kmer_len: usize,
         max_mismatches: i8,
-        max_consecutive_mismatches: i8
+        max_consecutive_mismatches: i8,
     ) -> Result<MergeResult, MergeErrors> {
         let input_kmers = &input.k_mers(kmer_len);
         // let max_consecutive_mismatches = 1i8;
@@ -111,15 +119,20 @@ impl DNAString {
         // let kmer_size = self.kmers[0].0.len();
         // let cluster_n_kmers = self.kmers.len();
         // let cluster_seq_len = self.kmers.len() + (kmer_size - 1);
-        
+
         // let mut clust_ranges: Range<usize>;
         // let mut input_ranges: Range<usize>;
-        
+
         // right overlap
 
         let mut kmers = self.k_mers(kmer_len);
-        
-        let res_opt = overlapping_ranges(&kmers, input_kmers, max_consecutive_mismatches, max_mismatches);
+
+        let res_opt = overlapping_ranges(
+            &kmers,
+            input_kmers,
+            max_consecutive_mismatches,
+            max_mismatches,
+        );
         let res: Overlap;
         let mut input_on_sequence = true;
 
@@ -130,14 +143,19 @@ impl DNAString {
             res = res_opt.unwrap();
         } else {
             // try sequence on input
-            let res_opt = overlapping_ranges(input_kmers, &kmers, max_consecutive_mismatches, max_mismatches);
+            let res_opt = overlapping_ranges(
+                input_kmers,
+                &kmers,
+                max_consecutive_mismatches,
+                max_mismatches,
+            );
             if res_opt.is_some() {
                 input_on_sequence = false;
                 res = res_opt.unwrap(); // TODO : reverse the mismatches postions
-                // take input as new sequence
-                // self.0 = input.0.clone();
+                                        // take input as new sequence
+                                        // self.0 = input.0.clone();
             } else {
-                return Err(MergeErrors::NoMerge)
+                return Err(MergeErrors::NoMerge);
             }
         }
 
@@ -154,10 +172,16 @@ impl DNAString {
         } else {
             // Input is NOT inside sequence
             if res.range_b.start > 0 {
+                if res.range_b.start > input_kmers.len() {
+                    return Err(MergeErrors::Unexpected);
+                }
                 // Add to the left
                 let kmers_to_add_left = &input_kmers[0..res.range_b.start];
 
-                kmers_to_add_left.iter().rev().for_each(|it| kmers.insert(0, it.clone()));
+                kmers_to_add_left
+                    .iter()
+                    .rev()
+                    .for_each(|it| kmers.insert(0, it.clone()));
                 self.0 = kmers_to_dnastring(&kmers).0;
                 return Ok(MergeResult::Left(res));
             }
@@ -166,8 +190,8 @@ impl DNAString {
                 let kmers_to_add_right = &input_kmers[res.range_b.end..];
 
                 kmers_to_add_right
-                .iter()
-                .for_each(|it| kmers.insert(kmers.len(), it.clone()));
+                    .iter()
+                    .for_each(|it| kmers.insert(kmers.len(), it.clone()));
                 self.0 = kmers_to_dnastring(&kmers).0;
                 return Ok(MergeResult::Right(res));
             }
@@ -178,7 +202,7 @@ impl DNAString {
 #[derive(Debug, Clone, Copy)]
 pub enum MergeErrors {
     NoMerge,
-    Unexpected
+    Unexpected,
 }
 #[derive(Debug, Clone)]
 pub enum MergeResult {
@@ -189,7 +213,7 @@ pub enum MergeResult {
 }
 #[derive(PartialEq)]
 pub struct CompressedString {
-    seq: Vec<NucleotidFreq>
+    seq: Vec<NucleotidFreq>,
 }
 
 impl CompressedString {
@@ -212,27 +236,31 @@ impl CompressedString {
     }
 
     pub fn as_string(&self) -> String {
-        self.seq.iter().flat_map(|it| {
-            let mut str = String::new();
-            match it.nucleotid {
-                Nucleotid::A => str.push('A'),
-                Nucleotid::C => str.push('C'),
-                Nucleotid::G => str.push('G'),
-                Nucleotid::T => str.push('T')
-            };
-            if it.freq > 1 {
-                vec![str, it.freq.to_string()]
-            } else {
-                vec![str]
-            }
-        }).collect::<Vec<String>>().join("")
+        self.seq
+            .iter()
+            .flat_map(|it| {
+                let mut str = String::new();
+                match it.nucleotid {
+                    Nucleotid::A => str.push('A'),
+                    Nucleotid::C => str.push('C'),
+                    Nucleotid::G => str.push('G'),
+                    Nucleotid::T => str.push('T'),
+                };
+                if it.freq > 1 {
+                    vec![str, it.freq.to_string()]
+                } else {
+                    vec![str]
+                }
+            })
+            .collect::<Vec<String>>()
+            .join("")
     }
 }
 
 #[derive(PartialEq)]
 struct NucleotidFreq {
     nucleotid: Nucleotid,
-    freq: u8
+    freq: u8,
 }
 impl NucleotidFreq {
     fn new(nucleotid: Nucleotid) -> NucleotidFreq {
@@ -245,7 +273,7 @@ impl NucleotidFreq {
 
 fn kmers_to_dnastring(kmers: &Vec<DNAString>) -> DNAString {
     let len = kmers.len();
-    
+
     let mut dna_string = DNAString::new_empty();
     for (pos, kmer) in kmers.iter().enumerate() {
         if pos != len - 1 {
@@ -260,10 +288,14 @@ fn kmers_to_dnastring(kmers: &Vec<DNAString>) -> DNAString {
 pub struct Overlap {
     pub range_a: Range<usize>,
     pub range_b: Range<usize>,
-    pub mismatches: Option<Vec<(usize, Nucleotid)>>
+    pub mismatches: Option<Vec<(usize, Nucleotid)>>,
 }
 
-pub fn overlapping_ranges(a_kmers: &Vec<DNAString>, b_kmers: &Vec<DNAString>, max_consecutive_mismatches: i8, max_mismatches: i8
+pub fn overlapping_ranges(
+    a_kmers: &Vec<DNAString>,
+    b_kmers: &Vec<DNAString>,
+    max_consecutive_mismatches: i8,
+    max_mismatches: i8,
 ) -> Option<Overlap> {
     let kmer_size = b_kmers[0].0.len();
 
@@ -281,11 +313,13 @@ pub fn overlapping_ranges(a_kmers: &Vec<DNAString>, b_kmers: &Vec<DNAString>, ma
 
     let mut a_range: Option<Range<usize>> = None;
     let mut b_range: Option<Range<usize>> = None;
-    
+
     let mut mismatches_pos = None;
     'main: for (b_pos, b_kmer) in b_kmers.iter().enumerate() {
-        if b_pos >= ((max_consecutive_mismatches as usize) + 1) * kmer_size {break;}
-        
+        if b_pos >= ((max_consecutive_mismatches as usize) + 1) * kmer_size {
+            break;
+        }
+
         // println!("Tryng to match b_kmer numero {}", b_pos);
 
         let b_seq = &b_kmer.0;
@@ -297,10 +331,10 @@ pub fn overlapping_ranges(a_kmers: &Vec<DNAString>, b_kmers: &Vec<DNAString>, ma
                 // println!("kmer : {}", a_kmer.as_string());
                 a_pos_match = Some(a_pos);
                 // b_pos_match = Some(b_pos);
-                break 'kmer_best_match ;
+                break 'kmer_best_match;
             }
         }
-        
+
         // no perfect match (small reads)
         // if a_pos_match.is_none() {
         //     'kmer_match: for (a_pos, a_kmer) in a_kmers.iter().enumerate() {
@@ -316,7 +350,7 @@ pub fn overlapping_ranges(a_kmers: &Vec<DNAString>, b_kmers: &Vec<DNAString>, ma
         //         }
         //     }
         // }
-        
+
         // if found an a_kmer that match the b_kmer;
         if a_pos_match.is_some() {
             // should come back with tol
@@ -331,7 +365,7 @@ pub fn overlapping_ranges(a_kmers: &Vec<DNAString>, b_kmers: &Vec<DNAString>, ma
 
             let iter_distance = max_back_distance;
             // println!("Possible backward steps {}", iter_distance);
-            
+
             // loop {
             let a_iter_pos = a_pos_tmp - iter_distance;
             let b_iter_pos = b_pos - iter_distance;
@@ -339,15 +373,24 @@ pub fn overlapping_ranges(a_kmers: &Vec<DNAString>, b_kmers: &Vec<DNAString>, ma
             let a_dist_to_end = a_full_len - a_iter_pos;
             let b_dist_to_end = b_full_len - b_iter_pos;
 
-            let overlap_len = if a_dist_to_end < b_dist_to_end { a_dist_to_end } else { b_dist_to_end };
+            let overlap_len = if a_dist_to_end < b_dist_to_end {
+                a_dist_to_end
+            } else {
+                b_dist_to_end
+            };
 
             let a_iter_range = a_iter_pos..(a_iter_pos + overlap_len);
             let b_iter_range = b_iter_pos..(b_iter_pos + overlap_len);
 
             let a_seq_iter = kmers_to_dnastring(&a_kmers[a_iter_range.clone()].to_vec()); // optimize by removing nt from previous DNAstr
             let b_seq_iter = kmers_to_dnastring(&b_kmers[b_iter_range.clone()].to_vec());
-    
-            let compare_res = compare_with_tolerance(&a_seq_iter.0, &b_seq_iter.0, max_consecutive_mismatches, max_mismatches);
+
+            let compare_res = compare_with_tolerance(
+                &a_seq_iter.0,
+                &b_seq_iter.0,
+                max_consecutive_mismatches,
+                max_mismatches,
+            );
             // println!("compare_res {:?}", compare_res);
 
             if compare_res.0 {
@@ -357,14 +400,14 @@ pub fn overlapping_ranges(a_kmers: &Vec<DNAString>, b_kmers: &Vec<DNAString>, ma
                 mismatches_pos = compare_res.1;
                 break 'main;
             }
-        } 
+        }
     }
 
     if a_range.is_some() && b_range.is_some() {
         Some(Overlap {
             range_a: a_range.unwrap(),
             range_b: b_range.unwrap(),
-            mismatches: mismatches_pos
+            mismatches: mismatches_pos,
         })
     } else {
         None
@@ -377,12 +420,18 @@ fn compare_with_tolerance(
     a_seq: &Vec<Nucleotid>,
     b_seq: &Vec<Nucleotid>,
     max_consecutive_mismatches: i8,
-    max_mismatches: i8
+    max_mismatches: i8,
 ) -> (bool, Option<Vec<(usize, Nucleotid)>>) {
-    assert!(max_consecutive_mismatches <= max_mismatches, "consecutive mismatches should be at max equal to maximum allowed mismatches");
+    assert!(
+        max_consecutive_mismatches <= max_mismatches,
+        "consecutive mismatches should be at max equal to maximum allowed mismatches"
+    );
     let seq_len = a_seq.len();
     assert_eq!(seq_len, b_seq.len(), "sequence length should be equal");
-    assert!((max_mismatches as usize) <= seq_len, "sequence length should be superior to maximum allowed mismatches");
+    assert!(
+        (max_mismatches as usize) <= seq_len,
+        "sequence length should be superior to maximum allowed mismatches"
+    );
 
     // init mismatches counters
     let mut n_mismatches = 0i8;
@@ -402,13 +451,19 @@ fn compare_with_tolerance(
         }
         last_match = curr_match.clone();
 
-        test = n_mismatches <= max_mismatches && n_consecutive_mismatches <= max_consecutive_mismatches;
-        if !test { break; }
+        test = n_mismatches <= max_mismatches
+            && n_consecutive_mismatches <= max_consecutive_mismatches;
+        if !test {
+            break;
+        }
     }
-    let mismatches_pos_opt = if mismatches_pos.len() > 0 { Some(mismatches_pos) } else { None };
+    let mismatches_pos_opt = if mismatches_pos.len() > 0 {
+        Some(mismatches_pos)
+    } else {
+        None
+    };
     (test, mismatches_pos_opt)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -423,7 +478,6 @@ mod tests {
         assert_eq!(seq_a.len() - 50 + 1, kmers.len());
     }
 
-
     #[test]
     fn left() {
         let seq_a = "ATTTCACATCTGTAATACTCTGTCTCCTTGTTATAATTTCATTTACTAGTTATAATTTATAATGCAAACTGGATTGCAGCCCCAGTGCCAGGACTCAAATTATCCCAGAAATATAGGAAAAAGATCAACTCACGGGGCTCCACGAAGAGTT";
@@ -436,8 +490,8 @@ mod tests {
             Err(err) => panic!("{:?}", err),
             Ok(result) => match result {
                 MergeResult::Left(_) => println!("{:?}", result),
-                _ => panic!("Error {:?}", result)
-            }
+                _ => panic!("Error {:?}", result),
+            },
         }
         assert_eq!(
             DNAString::new("GGCCT".as_bytes().to_vec()).0,
@@ -458,21 +512,31 @@ mod tests {
         println!("Should be inside without mismatch -------------------------------------");
         let seq_c = "AAAACATCTGTCGGGTGTCCCGGCATCCCCCAGAGGAAAGGGATGATATACATCTTACATAAATTGCAGTCACAAGAAAGAAAGAAAAACAGAGATAGCCCAATAAATTAGGAAACCTTTACAC";
         let sequence_c = DNAString::new(seq_c.as_bytes().to_vec());
-        let result = sequence_a.merge(&sequence_c, kmer_len, max_mismatches, max_consecutive_mismatches);
+        let result = sequence_a.merge(
+            &sequence_c,
+            kmer_len,
+            max_mismatches,
+            max_consecutive_mismatches,
+        );
         println!("{:?}", result);
         match result {
             Ok(ref r) => match r {
                 MergeResult::Inside(_) => (),
-                _ => panic!("Error {:?}", result)
+                _ => panic!("Error {:?}", result),
             },
-            _ => panic!("Error {:?}", result)
+            _ => panic!("Error {:?}", result),
         }
 
         // one mismatch on left
         println!("------------ Should be inside with one mismatch ------------------------");
         let seq_c = "TAAACATCTGTCGGGTGTCCCGGCATCCCCCAGAGGAAAGGGATGATATACATCTTACATAAATTGCAGTCACAAGAAAGAAAGAAAAACAGAGATAGCCCAATAAATTAGGAAACCTTTACAC";
         let sequence_c = DNAString::new(seq_c.as_bytes().to_vec());
-        let result = sequence_a.merge(&sequence_c, kmer_len, max_mismatches, max_consecutive_mismatches);
+        let result = sequence_a.merge(
+            &sequence_c,
+            kmer_len,
+            max_mismatches,
+            max_consecutive_mismatches,
+        );
         println!("{:?}", result);
         match result {
             Ok(ref r) => match r {
@@ -480,17 +544,22 @@ mod tests {
                     if ov.mismatches.as_ref().unwrap().len() != 1 {
                         panic!("Error {:?}", result)
                     }
-                },
-                _ => panic!("Error {:?}", result)
+                }
+                _ => panic!("Error {:?}", result),
             },
-            _ => panic!("Error {:?}", result)
+            _ => panic!("Error {:?}", result),
         }
 
         // // // 2 mismatches on left
         println!("------------ Should be inside with two mismatches ---------------------");
         let seq_c = "TTAACATCTGTCGGGTGTCCCGGCATCCCCCAGAGGAAAGGGATGATATACATCTTACATAAATTGCAGTCACAAGAAAGAAAGAAAAACAGAGATAGCCCAATAAATTAGGAAACCTTTACAC";
         let sequence_c = DNAString::new(seq_c.as_bytes().to_vec());
-        let result = sequence_a.merge(&sequence_c, kmer_len, max_mismatches, max_consecutive_mismatches);
+        let result = sequence_a.merge(
+            &sequence_c,
+            kmer_len,
+            max_mismatches,
+            max_consecutive_mismatches,
+        );
         println!("{:?}", result);
         match result {
             Ok(ref r) => match r {
@@ -498,21 +567,26 @@ mod tests {
                     if ov.mismatches.as_ref().unwrap().len() != 2 {
                         panic!("Error {:?}", result)
                     }
-                },
-                _ => panic!("Error {:?}", result)
+                }
+                _ => panic!("Error {:?}", result),
             },
-            _ => panic!("Error {:?}", result)
+            _ => panic!("Error {:?}", result),
         }
 
         // // // > 2 mismatches on left
         println!("------------ > 2 mismatches -------------------------------------------");
         let seq_c = "TTTACATCTGTCGGGTGTCCCGGCATCCCCCAGAGGAAAGGGATGATATACATCTTACATAAATTGCAGTCACAAGAAAGAAAGAAAAACAGAGATAGCCCAATAAATTAGGAAACCTTTACAC";
         let sequence_c = DNAString::new(seq_c.as_bytes().to_vec());
-        let result = sequence_a.merge(&sequence_c, kmer_len, max_mismatches, max_consecutive_mismatches);
+        let result = sequence_a.merge(
+            &sequence_c,
+            kmer_len,
+            max_mismatches,
+            max_consecutive_mismatches,
+        );
         println!("{:?}", result);
         match result {
             Ok(_) => panic!("Error {:?}", result),
-            _ => ()
+            _ => (),
         }
 
         // // // one mismatch on right
