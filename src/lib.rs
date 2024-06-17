@@ -284,32 +284,43 @@ pub fn overlapping_ranges(a_kmers: &Vec<DNAString>, b_kmers: &Vec<DNAString>, ma
     
     let mut mismatches_pos = None;
     'main: for (b_pos, b_kmer) in b_kmers.iter().enumerate() {
-        // take until the n-th (depending on consecutive mismatch tolerance)
         if b_pos >= ((max_consecutive_mismatches as usize) + 1) * kmer_size {break;}
         
         // println!("Tryng to match b_kmer numero {}", b_pos);
 
-        // let b_len = b_kmer.0.len();
         let b_seq = &b_kmer.0;
-        // compare recucively to each a_kmers growing n-th base with tol
 
-        // 1) best case scenario there's a perfect match between an a_kmer and the n-th first selected b_kmer
-        'kmer_match: for (a_pos, a_kmer) in a_kmers.iter().enumerate() {
+        'kmer_best_match: for (a_pos, a_kmer) in a_kmers.iter().enumerate() {
             let a_seq = &a_kmer.0;
             if a_seq == b_seq {
                 // println!("Found a kmer perfect match at nt {}", a_pos);
                 // println!("kmer : {}", a_kmer.as_string());
                 a_pos_match = Some(a_pos);
-                // b_pos_match = Some(b_pos); // for clarity but to be removed idem b_pos
-                break 'kmer_match ;
+                // b_pos_match = Some(b_pos);
+                break 'kmer_best_match ;
             }
         }
+        
+        // no perfect match (small reads)
+        // if a_pos_match.is_none() {
+        //     'kmer_match: for (a_pos, a_kmer) in a_kmers.iter().enumerate() {
+        //         let a_seq = &a_kmer.0;
+        //         let (test, _) = compare_with_tolerance(a_seq, b_seq, max_consecutive_mismatches, max_mismatches);
+
+        //         if test {
+        //             // println!("Found a kmer perfect match at nt {}", a_pos);
+        //             // println!("kmer : {}", a_kmer.as_string());
+        //             a_pos_match = Some(a_pos);
+        //             // b_pos_match = Some(b_pos); // for clarity but to be removed idem b_pos
+        //             break 'kmer_match ;
+        //         }
+        //     }
+        // }
         
         // if found an a_kmer that match the b_kmer;
         if a_pos_match.is_some() {
             // should come back with tol
             // and all front should match with tolerance
-
             let a_pos_tmp = a_pos_match.unwrap();
             a_pos_match = None;
 
@@ -346,13 +357,7 @@ pub fn overlapping_ranges(a_kmers: &Vec<DNAString>, b_kmers: &Vec<DNAString>, ma
                 mismatches_pos = compare_res.1;
                 break 'main;
             }
-                // if iter_distance == 0 { break; }
-                // iter_distance -= 1;
-            // }
-            
-        } else {
-            // println!("No perfect match!");
-        }
+        } 
     }
 
     if a_range.is_some() && b_range.is_some() {
@@ -361,7 +366,6 @@ pub fn overlapping_ranges(a_kmers: &Vec<DNAString>, b_kmers: &Vec<DNAString>, ma
             range_b: b_range.unwrap(),
             mismatches: mismatches_pos
         })
-        // Some((a_range.unwrap(), b_range.unwrap(), mismatches_pos))
     } else {
         None
     }
@@ -417,12 +421,6 @@ mod tests {
         let kmers = sequence_a.k_mers(50);
 
         assert_eq!(seq_a.len() - 50 + 1, kmers.len());
-
-        let seq_a = "ATTTCACATCTGTAATACTCTGTCTCCTTGTTATAATTTCATTTACTAGTTT";
-        let sequence_a = DNAString::new(seq_a.as_bytes().to_vec());
-        let kmers = sequence_a.k_mers(60);
-
-        println!("{}", kmers.len());
     }
 
 
