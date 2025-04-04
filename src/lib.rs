@@ -21,7 +21,7 @@
 use std::ops::Range;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Nucleotid {
+pub enum Nucleotide {
     A,
     C,
     G,
@@ -29,19 +29,19 @@ pub enum Nucleotid {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct DNAString(pub Vec<Nucleotid>);
+pub struct DNAString(pub Vec<Nucleotide>);
 
 impl DNAString {
     pub fn new(input: Vec<u8>) -> DNAString {
         // replace by new from vec u8 or from string
-        let mut seq: Vec<Nucleotid> = Vec::new();
+        let mut seq: Vec<Nucleotide> = Vec::new();
         for nt in input {
             match nt {
-                65u8 => seq.push(Nucleotid::A),
-                67u8 => seq.push(Nucleotid::C),
-                71u8 => seq.push(Nucleotid::G),
-                84u8 => seq.push(Nucleotid::T),
-                _ => panic!("Unknown nucleotid {}", String::from_utf8_lossy(&vec![nt])),
+                65u8 => seq.push(Nucleotide::A),
+                67u8 => seq.push(Nucleotide::C),
+                71u8 => seq.push(Nucleotide::G),
+                84u8 => seq.push(Nucleotide::T),
+                _ => panic!("Unknown nucleotid {}", String::from_utf8_lossy(&[nt])),
             }
         }
         DNAString(seq)
@@ -55,10 +55,10 @@ impl DNAString {
 
         for nt in self.0.iter() {
             match nt {
-                Nucleotid::A => str.push('A'),
-                Nucleotid::C => str.push('C'),
-                Nucleotid::G => str.push('G'),
-                Nucleotid::T => str.push('T'),
+                Nucleotide::A => str.push('A'),
+                Nucleotide::C => str.push('C'),
+                Nucleotide::G => str.push('G'),
+                Nucleotide::T => str.push('T'),
             }
         }
         str
@@ -67,12 +67,12 @@ impl DNAString {
         self.0
             .iter()
             .map(|nt| match nt {
-                Nucleotid::A => "A",
-                Nucleotid::C => "C",
-                Nucleotid::G => "G",
-                Nucleotid::T => "T",
+                Nucleotide::A => "A",
+                Nucleotide::C => "C",
+                Nucleotide::G => "G",
+                Nucleotide::T => "T",
             })
-            .map(|nt| String::from(nt))
+            .map(String::from)
             .collect::<Vec<String>>()
             .join("")
     }
@@ -84,7 +84,7 @@ impl DNAString {
             for i in 0..diff {
                 res.push(DNAString(self.0[i..(i + k)].to_vec()));
             }
-            return res;
+            res
         } else {
             panic!("{} read is too short {}", self.as_string(), len);
         }
@@ -99,9 +99,9 @@ impl DNAString {
                     self.0[i..(i + k)].to_vec(),
                 )));
             }
-            return res;
+            res
         } else {
-            return vec![CompressedString::new(self.clone())];
+            vec![CompressedString::new(self.clone())]
         }
     }
 
@@ -162,20 +162,24 @@ impl DNAString {
         if res.range_a.len() == input_kmers.len() {
             if input_on_sequence {
                 // Input is inside sequence
-                return Ok(MergeResult::Inside(res));
+                Ok(MergeResult::Inside(res))
             } else {
                 // Input is outside sequence
                 // take input as new sequence
                 self.0 = input.0.clone();
-                return Ok(MergeResult::Outside(res));
+                Ok(MergeResult::Outside(res))
             }
         } else {
             // Input is NOT inside sequence
             if res.range_b.start > 0 {
+                // Add to the left
                 if res.range_b.start > input_kmers.len() {
+                    let seq = kmers_to_dnastring(input_kmers);
+                    println!("{input_kmers:?}");
+                    println!("{seq:?}");
+                    println!("{res:?}");
                     return Err(MergeErrors::Unexpected);
                 }
-                // Add to the left
                 let kmers_to_add_left = &input_kmers[0..res.range_b.start];
 
                 kmers_to_add_left
@@ -241,10 +245,10 @@ impl CompressedString {
             .flat_map(|it| {
                 let mut str = String::new();
                 match it.nucleotid {
-                    Nucleotid::A => str.push('A'),
-                    Nucleotid::C => str.push('C'),
-                    Nucleotid::G => str.push('G'),
-                    Nucleotid::T => str.push('T'),
+                    Nucleotide::A => str.push('A'),
+                    Nucleotide::C => str.push('C'),
+                    Nucleotide::G => str.push('G'),
+                    Nucleotide::T => str.push('T'),
                 };
                 if it.freq > 1 {
                     vec![str, it.freq.to_string()]
@@ -259,11 +263,11 @@ impl CompressedString {
 
 #[derive(PartialEq)]
 struct NucleotidFreq {
-    nucleotid: Nucleotid,
+    nucleotid: Nucleotide,
     freq: u8,
 }
 impl NucleotidFreq {
-    fn new(nucleotid: Nucleotid) -> NucleotidFreq {
+    fn new(nucleotid: Nucleotide) -> NucleotidFreq {
         NucleotidFreq { nucleotid, freq: 1 }
     }
     fn increment(&mut self) {
@@ -271,7 +275,7 @@ impl NucleotidFreq {
     }
 }
 
-fn kmers_to_dnastring(kmers: &Vec<DNAString>) -> DNAString {
+fn kmers_to_dnastring(kmers: &[DNAString]) -> DNAString {
     let len = kmers.len();
 
     let mut dna_string = DNAString::new_empty();
@@ -288,12 +292,12 @@ fn kmers_to_dnastring(kmers: &Vec<DNAString>) -> DNAString {
 pub struct Overlap {
     pub range_a: Range<usize>,
     pub range_b: Range<usize>,
-    pub mismatches: Option<Vec<(usize, Nucleotid)>>,
+    pub mismatches: Option<Vec<(usize, Nucleotide)>>,
 }
 
 pub fn overlapping_ranges(
-    a_kmers: &Vec<DNAString>,
-    b_kmers: &Vec<DNAString>,
+    a_kmers: &[DNAString],
+    b_kmers: &[DNAString],
     max_consecutive_mismatches: i8,
     max_mismatches: i8,
 ) -> Option<Overlap> {
@@ -382,8 +386,8 @@ pub fn overlapping_ranges(
             let a_iter_range = a_iter_pos..(a_iter_pos + overlap_len);
             let b_iter_range = b_iter_pos..(b_iter_pos + overlap_len);
 
-            let a_seq_iter = kmers_to_dnastring(&a_kmers[a_iter_range.clone()].to_vec()); // optimize by removing nt from previous DNAstr
-            let b_seq_iter = kmers_to_dnastring(&b_kmers[b_iter_range.clone()].to_vec());
+            let a_seq_iter = kmers_to_dnastring(&a_kmers[a_iter_range.clone()]); // optimize by removing nt from previous DNAstr
+            let b_seq_iter = kmers_to_dnastring(&b_kmers[b_iter_range.clone()]);
 
             let compare_res = compare_with_tolerance(
                 &a_seq_iter.0,
@@ -403,25 +407,21 @@ pub fn overlapping_ranges(
         }
     }
 
-    if a_range.is_some() && b_range.is_some() {
-        Some(Overlap {
-            range_a: a_range.unwrap(),
-            range_b: b_range.unwrap(),
-            mismatches: mismatches_pos,
-        })
-    } else {
-        None
-    }
+    a_range.zip(b_range).map(|(range_a, range_b)| Overlap {
+        range_a,
+        range_b,
+        mismatches: mismatches_pos,
+    })
 }
 
 // compare each nucleotids with sequence tolerance
 // a is the reference
 fn compare_with_tolerance(
-    a_seq: &Vec<Nucleotid>,
-    b_seq: &Vec<Nucleotid>,
+    a_seq: &[Nucleotide],
+    b_seq: &[Nucleotide],
     max_consecutive_mismatches: i8,
     max_mismatches: i8,
-) -> (bool, Option<Vec<(usize, Nucleotid)>>) {
+) -> (bool, Option<Vec<(usize, Nucleotide)>>) {
     assert!(
         max_consecutive_mismatches <= max_mismatches,
         "consecutive mismatches should be at max equal to maximum allowed mismatches"
@@ -436,7 +436,7 @@ fn compare_with_tolerance(
     // init mismatches counters
     let mut n_mismatches = 0i8;
     let mut n_consecutive_mismatches = 0i8;
-    let mut mismatches_pos: Vec<(usize, Nucleotid)> = Vec::new();
+    let mut mismatches_pos: Vec<(usize, Nucleotide)> = Vec::new();
 
     let mut last_match = true;
     let mut test = true;
@@ -449,7 +449,7 @@ fn compare_with_tolerance(
                 n_consecutive_mismatches += 1;
             }
         }
-        last_match = curr_match.clone();
+        last_match = curr_match;
 
         test = n_mismatches <= max_mismatches
             && n_consecutive_mismatches <= max_consecutive_mismatches;
@@ -457,7 +457,7 @@ fn compare_with_tolerance(
             break;
         }
     }
-    let mismatches_pos_opt = if mismatches_pos.len() > 0 {
+    let mismatches_pos_opt = if !mismatches_pos.is_empty() {
         Some(mismatches_pos)
     } else {
         None
@@ -495,7 +495,11 @@ mod tests {
         }
         assert_eq!(
             DNAString::new("GGCCT".as_bytes().to_vec()).0,
-            sequence_a.0.into_iter().take(5).collect::<Vec<Nucleotid>>()
+            sequence_a
+                .0
+                .into_iter()
+                .take(5)
+                .collect::<Vec<Nucleotide>>()
         );
     }
 
@@ -519,12 +523,13 @@ mod tests {
             max_consecutive_mismatches,
         );
         println!("{:?}", result);
-        match result {
-            Ok(ref r) => match r {
+        if let Ok(ref r) = result {
+            match r {
                 MergeResult::Inside(_) => (),
                 _ => panic!("Error {:?}", result),
-            },
-            _ => panic!("Error {:?}", result),
+            }
+        } else {
+            panic!("Error {:?}", result)
         }
 
         // one mismatch on left
@@ -538,16 +543,17 @@ mod tests {
             max_consecutive_mismatches,
         );
         println!("{:?}", result);
-        match result {
-            Ok(ref r) => match r {
+        if let Ok(ref r) = result {
+            match r {
                 MergeResult::Inside(ov) => {
                     if ov.mismatches.as_ref().unwrap().len() != 1 {
                         panic!("Error {:?}", result)
                     }
                 }
                 _ => panic!("Error {:?}", result),
-            },
-            _ => panic!("Error {:?}", result),
+            }
+        } else {
+            panic!("Error {:?}", result)
         }
 
         // // // 2 mismatches on left
@@ -562,14 +568,15 @@ mod tests {
         );
         println!("{:?}", result);
         match result {
-            Ok(ref r) => match r {
-                MergeResult::Inside(ov) => {
+            Ok(ref r) => {
+                if let MergeResult::Inside(ov) = r {
                     if ov.mismatches.as_ref().unwrap().len() != 2 {
                         panic!("Error {:?}", result)
                     }
+                } else {
+                    panic!("Error {:?}", result)
                 }
-                _ => panic!("Error {:?}", result),
-            },
+            }
             _ => panic!("Error {:?}", result),
         }
 
@@ -584,38 +591,8 @@ mod tests {
             max_consecutive_mismatches,
         );
         println!("{:?}", result);
-        match result {
-            Ok(_) => panic!("Error {:?}", result),
-            _ => (),
+        if result.is_ok() {
+            panic!("Error {:?}", result)
         }
-
-        // // // one mismatch on right
-        // println!("------------ Should be inside with one mismatch -------------------------");
-        // let seq_c = "AAAACATCTGTCGGGTGTCCCGGCATCCCCCAGAGGAAAGGGATGATATACATCTTACATAAATTGCAGTCACAAGAAAGAAAGAAAAACAGAGATAGCCCAATAAATTAGGAAACCTTTACAT";
-        // let sequence_c = DNAString::new(seq_c.as_bytes().to_vec());
-        // let c_kmers = sequence_c.k_mers(20);
-        // let r = clust.merge(&c_kmers, "c".to_string(), 2, 1);
-        // assert!(r);
-
-        // println!("------------ Should be inside with two mismatches ----------------------");
-        // let seq_c = "AAAACATCTGTCGGGTGTCCCGGCATCCCCCAGAGGAAAGGGATGATATACATCTTACATAAATTGCAGTCACAAGAAAGAAAGAAAAACAGAGATAGCCCAATAAATTAGGAAACCTTTACTT";
-        // let sequence_c = DNAString::new(seq_c.as_bytes().to_vec());
-        // let c_kmers = sequence_c.k_mers(20);
-        // let r = clust.merge(&c_kmers, "c".to_string(), 2, 1);
-        // assert!(r);
-
-        // println!("------------ > 2 mismatches -------------------------------------------");
-        // let seq_c = "AAAACATCTGTCGGGTGTCCCGGCATCCCCCAGAGGAAAGGGATGATATACATCTTACATAAATTGCAGTCACAAGAAAGAAAGAAAAACAGAGATAGCCCAATAAATTAGGAAACCTTTATTT";
-        // let sequence_c = DNAString::new(seq_c.as_bytes().to_vec());
-        // let c_kmers = sequence_c.k_mers(20);
-        // let r = clust.merge(&c_kmers, "c".to_string(), 2, 1);
-        // assert!(!r);
-
-        // println!("------------ bigger -------------------------------------------");
-        // let seq_c = "TACTCACGGGGCTCCACGAAGAGTTTGATGCCAGTTCCGAAAAACATCTGTCGGGTGTCCCGGCATCCCCCAGAGGAAAGGGATGATATACATCTTACATAAATTGCAGTCACAAGAAAGAAAGAAAAACAGAGATAGCCCAATAAATTAGGAAACCTTTACACTGTTTCGGCTTGATGAATTAGAAGACAGAATCCACTATACT";
-        // let sequence_c = DNAString::new(seq_c.as_bytes().to_vec());
-        // let c_kmers = sequence_c.k_mers(20);
-        // let r = clust.merge(&c_kmers, "c".to_string(), 2, 1);
-        // assert!(r);
     }
 }
