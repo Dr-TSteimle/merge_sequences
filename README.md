@@ -1,10 +1,5 @@
 # merge_sequences
-
-<<<<<<< HEAD
-**Approximate merging of DNA sequences using k-mer overlaps and mismatch-tolerant alignment**  
-_A Rust library by Thomas Steimlé_
-
----
+![example workflow](https://github.com/Dr-TSteimle/merge_sequences/actions/workflows/rust.yml/badge.svg)
 
 ## 🔬 What is it?
 
@@ -35,7 +30,4 @@ Add the following to your `Cargo.toml`:
 ```toml
 [dependencies]
 merge_sequences = "0.1"
-
-=======
-![example workflow](https://github.com/Dr-TSteimle/merge_sequences/actions/workflows/rust.yml/badge.svg)
->>>>>>> d9116841f8df0fa3aea9ed726d232833ebb42857
+```
