@@ -29,5 +29,5 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-merge_sequences = "0.1"
+merge_sequences  = { git = "https://github.com/Dr-TSteimle/merge_sequences.git" }
 ```
