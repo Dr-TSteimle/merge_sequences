@@ -17,14 +17,7 @@
 //! using a fast k-mer based strategy with configurable mismatch tolerances.
 //!
 //! This library is ideal for applications in read clustering, contig extension, or
-//! local alignment of noisy DNA sequences where partial overlaps and sequencing errors must be tolerated.
-//!
-//! ## 🔬 Features
-//!
-//! - Efficient k-mer generation from `DNAString`
-//! - Direction-aware merge logic (`Left`, `Right`, `Inside`, `Outside`)
-//! - Mismatch-tolerant sequence comparison (`max_mismatches`, `max_consecutive_mismatches`)
-//! - Rich merge results with overlap ranges and mismatch positions
+//! local alignment of noisy DNA sequences.
 //!
 //! ## 🧬 Key Types
 //!
