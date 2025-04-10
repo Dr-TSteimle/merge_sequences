@@ -1,10 +1,14 @@
 ![example workflow](https://github.com/Dr-TSteimle/merge_sequences/actions/workflows/rust.yml/badge.svg)
 
 # merge_sequences
+<<<<<<< HEAD
 
 **Approximate merging of DNA sequences using k-mer overlaps and mismatch-tolerant alignment**  
 
 ---
+=======
+![example workflow](https://github.com/Dr-TSteimle/merge_sequences/actions/workflows/rust.yml/badge.svg)
+>>>>>>> a8db3c78e633ed654e6721dacf257f9831831368
 
 ## 🔬 What is it?
 
@@ -31,6 +35,11 @@ Add the following to your `Cargo.toml`:
 
 ```toml
 [dependencies]
+<<<<<<< HEAD
 merge_sequences = "0.1"
 ```
 
+=======
+merge_sequences  = { git = "https://github.com/Dr-TSteimle/merge_sequences.git" }
+```
+>>>>>>> a8db3c78e633ed654e6721dacf257f9831831368
